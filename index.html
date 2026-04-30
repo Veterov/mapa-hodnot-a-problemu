@@ -65,8 +65,9 @@
 <div id="zprava">Děkujeme! Váš bod byl uložen.</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-  var mapa = L.map('mapa').setView([49.0340, 17.0390], 15);
   var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYiWGAXIMgB3bi-i01ocfCZZ8aRunqEmWWMo5ggS50H6Ikwq-RW_lnCsFyWbyaEpdOLg/exec";
+
+  var mapa = L.map('mapa').setView([49.0340, 17.0390], 15);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -116,7 +117,6 @@
     var popis = document.getElementById('popis').value.trim();
     var lat = kliknutaLatLng.lat.toFixed(6);
     var lng = kliknutaLatLng.lng.toFixed(6);
-    var cas = new Date().toISOString();
 
     if (docasnyMarker) mapa.removeLayer(docasnyMarker);
     var marker = L.marker(kliknutaLatLng, { icon: ikonaBarva(vybranyTyp) }).addTo(mapa);
@@ -126,13 +126,12 @@
 
     var zprava = document.getElementById('zprava');
     zprava.style.display = 'block';
-    setTimeout(function() { zprava.style.display = 'none'; }, 3000);   
-    fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lat: lat, lng: lng, typ: vybranyTyp, popis: popis, cas: cas }),
-      mode: 'no-cors'
-    });
+    setTimeout(function() { zprava.style.display = 'none'; }, 3000);
+
+    // GET request - obchodzi CORS
+    var url = APPS_SCRIPT_URL + "?lat=" + lat + "&lng=" + lng + "&typ=" + encodeURIComponent(vybranyTyp) + "&popis=" + encodeURIComponent(popis);
+    var img = new Image();
+    img.src = url;
   }
 
   document.getElementById('overlay').addEventListener('click', zavritPanel);
