@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin mapa – Věteřov</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; }
+    header { background: #1a3a2a; color: white; padding: 12px 20px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    header h1 { font-size: 18px; font-weight: bold; }
+    .stats { display: flex; gap: 16px; margin-left: auto; flex-wrap: wrap; }
+    .stat { background: rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 14px; font-size: 13px; text-align: center; }
+    .stat span { display: block; font-size: 20px; font-weight: bold; }
+    #mapa { width: 100%; height: calc(100vh - 56px); }
+    .legenda { position: absolute; bottom: 30px; left: 10px; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 10px 14px; font-size: 12px; z-index: 500; }
+    .leg-item { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot.pos { background: #2d9e5f; }
+    .dot.neg { background: #d94f3b; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>🗺 Admin mapa – Věteřov</h1>
+  <div class="stats">
+    <div class="stat"><span id="pocetPos">-</span>Pozitivní</div>
+    <div class="stat"><span id="pocetNeg">-</span>Negativní</div>
+    <div class="stat"><span id="pocetCelk">-</span>Celkem</div>
+  </div>
+</header>
+<div style="position:relative;">
+  <div id="mapa"></div>
+  <div class="legenda">
+    <div class="leg-item"><div class="dot pos"></div> Pozitivní místo</div>
+    <div class="leg-item"><div class="dot neg"></div> Negativní místo</div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+  // =============================================
+  // VLOZ SEM ID SVOJHO GOOGLE SHEETU
+  // Je to dlhy retazec z URL tvojho Sheetu medzi /d/ a /edit
+  // =============================================
+  var SHEET_ID = "VLOZ_SEM_ID_SHEETU";
+  // =============================================
+
+  var mapa = L.map('mapa').setView([49.0340, 17.0390], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap',
+    maxZoom: 19
+  }).addTo(mapa);
+
+  function ikonaBarva(typ) {
+    var barva = typ === 'pozitivni' ? '#2d9e5f' : '#d94f3b';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.3 21.7 0 14 0z" fill="' + barva + '"/><circle cx="14" cy="14" r="7" fill="white"/></svg>';
+    return L.divIcon({ html: svg, iconSize: [28,36], iconAnchor: [14,36], popupAnchor: [0,-36], className: '' });
+  }
+
+  var url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=Sheet1';
+
+  fetch(url)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      var json = JSON.parse(text.substring(47, text.length - 2));
+      var rows = json.table.rows;
+      var pocetPos = 0;
+      var pocetNeg = 0;
+
+      rows.forEach(function(row) {
+        if (!row.c[0] || !row.c[0].v) return;
+        var lat = parseFloat(row.c[0].v);
+        var lng = parseFloat(row.c[1].v);
+        var typ = row.c[2] ? row.c[2].v : '';
+        var popis = row.c[3] ? row.c[3].v : '';
+        var cas = row.c[4] ? row.c[4].v : '';
+
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        if (typ === 'pozitivni') pocetPos++;
+        else if (typ === 'negativni') pocetNeg++;
+
+        var datum = cas ? new Date(cas).toLocaleString('cs-CZ') : '';
+        var popupText = '<b>' + (typ === 'pozitivni' ? '✅ Líbí se mi' : '❌ Vadí mi') + '</b>'
+          + (popis ? '<br>' + popis : '')
+          + (datum ? '<br><small style="color:#888">' + datum + '</small>' : '');
+
+        L.marker([lat, lng], { icon: ikonaBarva(typ) })
+          .bindPopup(popupText)
+          .addTo(mapa);
+      });
+
+      document.getElementById('pocetPos').textContent = pocetPos;
+      document.getElementById('pocetNeg').textContent = pocetNeg;
+      document.getElementById('pocetCelk').textContent = pocetPos + pocetNeg;
+    })
+    .catch(function(e) {
+      alert('Chyba načítania dát. Skontroluj SHEET_ID a zdieľanie hárku.');
+    });
+</script>
+</body>
+</html>
