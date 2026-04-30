@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Participativní mapa – Věterov</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; }
+    header { background: #2d6a4f; color: white; padding: 14px 20px; text-align: center; }
+    header h1 { font-size: 20px; font-weight: bold; }
+    header p { font-size: 13px; margin-top: 4px; opacity: 0.85; }
+    #legenda { display: flex; justify-content: center; gap: 24px; background: white; padding: 10px 20px; border-bottom: 1px solid #ddd; flex-wrap: wrap; }
+    .leg-item { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #333; }
+    .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+    .dot.pos { background: #2d9e5f; border: 2px solid #1a6e40; }
+    .dot.neg { background: #d94f3b; border: 2px solid #a03020; }
+    #mapa { width: 100%; height: calc(100vh - 120px); }
+    #panel {
+      display: none; position: fixed; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: white; border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      padding: 24px; width: 320px; z-index: 2000;
+    }
+    #panel h2 { font-size: 16px; margin-bottom: 14px; color: #222; }
+    .btn-group { display: flex; gap: 10px; margin-bottom: 16px; }
+    .btn-typ { flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; background: white; }
+    .btn-typ.pos { color: #1a6e40; }
+    .btn-typ.pos.active { background: #d4edda; border-color: #2d9e5f; }
+    .btn-typ.neg { color: #a03020; }
+    .btn-typ.neg.active { background: #fde8e5; border-color: #d94f3b; }
+    textarea { width: 100%; height: 80px; border: 1px solid #ccc; border-radius: 6px; padding: 8px; font-size: 13px; resize: none; margin-bottom: 14px; }
+    .akce { display: flex; gap: 10px; }
+    .btn-ulozit { flex: 1; background: #2d6a4f; color: white; border: none; border-radius: 6px; padding: 10px; font-size: 14px; cursor: pointer; font-weight: bold; }
+    .btn-ulozit:hover { background: #1f4f38; }
+    .btn-zrusit { flex: 1; background: white; color: #555; border: 1px solid #ccc; border-radius: 6px; padding: 10px; font-size: 14px; cursor: pointer; }
+    #overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.35); z-index: 1999; }
+    #zprava { display: none; position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #2d6a4f; color: white; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 3000; white-space: nowrap; }
+    #navod { position: absolute; bottom: 20px; right: 10px; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #555; z-index: 500; max-width: 220px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Participativní mapa krajiny – Věterov</h1>
+  <p>Klikněte na mapu a označte místo, které máte rádi, nebo místo, kde vidíte problém</p>
+</header>
+<div id="legenda">
+  <div class="leg-item"><div class="dot pos"></div> Pozitivní místo (mám rád/a)</div>
+  <div class="leg-item"><div class="dot neg"></div> Negativní místo (vadí mi, problém)</div>
+</div>
+<div style="position:relative;">
+  <div id="mapa"></div>
+  <div id="navod">Klikněte kamkoliv na mapu<br>a přidejte své místo.</div>
+</div>
+<div id="overlay"></div>
+<div id="panel">
+  <h2>Označit místo na mapě</h2>
+  <div class="btn-group">
+    <button class="btn-typ pos" id="btnPos" onclick="vyberTyp('pozitivni')">+ Líbí se mi</button>
+    <button class="btn-typ neg" id="btnNeg" onclick="vyberTyp('negativni')">– Vadí mi</button>
+  </div>
+  <textarea id="popis" placeholder="Popište místo – co se vám líbí nebo vadí... (nepovinné)"></textarea>
+  <div class="akce">
+    <button class="btn-ulozit" onclick="ulozitBod()">Uložit bod</button>
+    <button class="btn-zrusit" onclick="zavritPanel()">Zrušit</button>
+  </div>
+</div>
+<div id="zprava">Děkujeme! Váš bod byl uložen.</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+  var APPS_SCRIPT_URL = "VLOZ_SEM_URL_APPS_SCRIPTU";
+
+  var mapa = L.map('mapa').setView([48.9480, 17.0520], 14);
+
+  // Ortofoto CUZK - Web Mercator verze (kompatibilni s Leaflet)
+  var ortofoto = L.tileLayer(
+    'https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer/tile/{z}/{y}/{x}',
+    {
+      attribution: '&copy; <a href="https://www.cuzk.gov.cz">ČÚZK</a>',
+      maxZoom: 19,
+      errorTileUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png'
+    }
+  );
+
+  // Zaloha - OpenStreetMap
+  var osm = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19
+    }
+  );
+
+  ortofoto.addTo(mapa);
+
+  // Prepinac map - vlevo nahore
+  L.control.layers(
+    { 'Ortofoto (ČÚZK)': ortofoto, 'Mapa (OpenStreetMap)': osm },
+    {},
+    { position: 'topleft', collapsed: false }
+  ).addTo(mapa);
+
+  var vybranyTyp = null;
+  var kliknutaLatLng = null;
+  var docasnyMarker = null;
+
+  function ikonaBarva(typ) {
+    var barva = typ === 'pozitivni' ? '#2d9e5f' : '#d94f3b';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">'
+      + '<path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.3 21.7 0 14 0z" fill="' + barva + '"/>'
+      + '<circle cx="14" cy="14" r="7" fill="white"/>'
+      + '</svg>';
+    return L.divIcon({ html: svg, iconSize: [28,36], iconAnchor: [14,36], popupAnchor: [0,-36], className: '' });
+  }
+
+  mapa.on('click', function(e) {
+    kliknutaLatLng = e.latlng;
+    if (docasnyMarker) mapa.removeLayer(docasnyMarker);
+    docasnyMarker = L.circleMarker(e.latlng, { radius: 8, color: '#fff', fillColor: '#888', fillOpacity: 0.9, weight: 2 }).addTo(mapa);
+    otevritPanel();
+  });
+
+  function otevritPanel() {
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('panel').style.display = 'block';
+    vybranyTyp = null;
+    document.getElementById('btnPos').classList.remove('active');
+    document.getElementById('btnNeg').classList.remove('active');
+    document.getElementById('popis').value = '';
+  }
+
+  function zavritPanel() {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('panel').style.display = 'none';
+    if (docasnyMarker) { mapa.removeLayer(docasnyMarker); docasnyMarker = null; }
+  }
+
+  function vyberTyp(typ) {
+    vybranyTyp = typ;
+    document.getElementById('btnPos').classList.toggle('active', typ === 'pozitivni');
+    document.getElementById('btnNeg').classList.toggle('active', typ === 'negativni');
+  }
+
+  function ulozitBod() {
+    if (!vybranyTyp) { alert('Prosím vyberte, zda se vám místo líbí nebo vadí.'); return; }
+    var popis = document.getElementById('popis').value.trim();
+    var lat = kliknutaLatLng.lat.toFixed(6);
+    var lng = kliknutaLatLng.lng.toFixed(6);
+    var cas = new Date().toISOString();
+
+    if (docasnyMarker) mapa.removeLayer(docasnyMarker);
+    var marker = L.marker(kliknutaLatLng, { icon: ikonaBarva(vybranyTyp) }).addTo(mapa);
+    var popupText = '<b>' + (vybranyTyp === 'pozitivni' ? 'Líbí se mi' : 'Vadí mi') + '</b>' + (popis ? '<br>' + popis : '');
+    marker.bindPopup(popupText).openPopup();
+    zavritPanel();
+
+    var zprava = document.getElementById('zprava');
+    zprava.style.display = 'block';
+    setTimeout(function() { zprava.style.display = 'none'; }, 3000);
+
+    if (APPS_SCRIPT_URL !== "VLOZ_SEM_URL_APPS_SCRIPTU") {
+      fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat: lat, lng: lng, typ: vybranyTyp, popis: popis, cas: cas }),
+        mode: 'no-cors'
+      }).catch(function(e) { console.warn('Chyba:', e); });
+    }
+  }
+
+  document.getElementById('overlay').addEventListener('click', zavritPanel);
+</script>
+</body>
+</html>
