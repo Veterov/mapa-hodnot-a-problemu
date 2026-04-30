@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Participativní mapa – Věterov</title>
+  <title>Participativní mapa – Věteřov</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,13 +18,7 @@
     .dot.pos { background: #2d9e5f; border: 2px solid #1a6e40; }
     .dot.neg { background: #d94f3b; border: 2px solid #a03020; }
     #mapa { width: 100%; height: calc(100vh - 120px); }
-    #panel {
-      display: none; position: fixed; top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: white; border-radius: 10px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      padding: 24px; width: 320px; z-index: 2000;
-    }
+    #panel { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); padding: 24px; width: 320px; z-index: 2000; }
     #panel h2 { font-size: 16px; margin-bottom: 14px; color: #222; }
     .btn-group { display: flex; gap: 10px; margin-bottom: 16px; }
     .btn-typ { flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold; background: white; }
@@ -44,7 +38,7 @@
 </head>
 <body>
 <header>
-  <h1>Participativní mapa krajiny – Věterov</h1>
+  <h1>Participativní mapa krajiny – Věteřov</h1>
   <p>Klikněte na mapu a označte místo, které máte rádi, nebo místo, kde vidíte problém</p>
 </header>
 <div id="legenda">
@@ -71,37 +65,12 @@
 <div id="zprava">Děkujeme! Váš bod byl uložen.</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-  var APPS_SCRIPT_URL = "VLOZ_SEM_URL_APPS_SCRIPTU";
+  var mapa = L.map('mapa').setView([49.0340, 17.0390], 15);
 
-  var mapa = L.map('mapa').setView([48.9480, 17.0520], 14);
-
-  // Ortofoto CUZK - Web Mercator verze (kompatibilni s Leaflet)
-  var ortofoto = L.tileLayer(
-    'https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO_WM/MapServer/tile/{z}/{y}/{x}',
-    {
-      attribution: '&copy; <a href="https://www.cuzk.gov.cz">ČÚZK</a>',
-      maxZoom: 19,
-      errorTileUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png'
-    }
-  );
-
-  // Zaloha - OpenStreetMap
-  var osm = L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-      maxZoom: 19
-    }
-  );
-
-  ortofoto.addTo(mapa);
-
-  // Prepinac map - vlevo nahore
-  L.control.layers(
-    { 'Ortofoto (ČÚZK)': ortofoto, 'Mapa (OpenStreetMap)': osm },
-    {},
-    { position: 'topleft', collapsed: false }
-  ).addTo(mapa);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(mapa);
 
   var vybranyTyp = null;
   var kliknutaLatLng = null;
@@ -109,10 +78,7 @@
 
   function ikonaBarva(typ) {
     var barva = typ === 'pozitivni' ? '#2d9e5f' : '#d94f3b';
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">'
-      + '<path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.3 21.7 0 14 0z" fill="' + barva + '"/>'
-      + '<circle cx="14" cy="14" r="7" fill="white"/>'
-      + '</svg>';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.3 0 0 6.3 0 14c0 10.5 14 22 14 22s14-11.5 14-22C28 6.3 21.7 0 14 0z" fill="' + barva + '"/><circle cx="14" cy="14" r="7" fill="white"/></svg>';
     return L.divIcon({ html: svg, iconSize: [28,36], iconAnchor: [14,36], popupAnchor: [0,-36], className: '' });
   }
 
@@ -160,15 +126,6 @@
     var zprava = document.getElementById('zprava');
     zprava.style.display = 'block';
     setTimeout(function() { zprava.style.display = 'none'; }, 3000);
-
-    if (APPS_SCRIPT_URL !== "VLOZ_SEM_URL_APPS_SCRIPTU") {
-      fetch(APPS_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat: lat, lng: lng, typ: vybranyTyp, popis: popis, cas: cas }),
-        mode: 'no-cors'
-      }).catch(function(e) { console.warn('Chyba:', e); });
-    }
   }
 
   document.getElementById('overlay').addEventListener('click', zavritPanel);
