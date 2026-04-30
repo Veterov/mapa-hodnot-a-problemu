@@ -126,7 +126,13 @@
 
     var zprava = document.getElementById('zprava');
     zprava.style.display = 'block';
-    setTimeout(function() { zprava.style.display = 'none'; }, 3000);
+    setTimeout(function() { zprava.style.display = 'none'; }, 3000);   
+    fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lat: lat, lng: lng, typ: vybranyTyp, popis: popis, cas: cas }),
+      mode: 'no-cors'
+    });
   }
 
   document.getElementById('overlay').addEventListener('click', zavritPanel);
