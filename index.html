@@ -130,6 +130,9 @@ var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJy9WnkHe-ypmzE6
 
     // GET request - obchodzi CORS
     var url = APPS_SCRIPT_URL + "?lat=" + lat + "&lng=" + lng + "&typ=" + encodeURIComponent(vybranyTyp) + "&popis=" + encodeURIComponent(popis);
+var xhr = new XMLHttpRequest();
+xhr.open("GET", url, true);
+xhr.send();
     var img = new Image();
     img.src = url;
   }
