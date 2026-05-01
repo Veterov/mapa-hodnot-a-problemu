@@ -64,17 +64,17 @@
 </div>
 <div id="zprava">Děkujeme! Váš bod byl uložen.</div>
 
-<!-- Skryty iframe a form pre Google Forms -->
 <iframe name="hidden-iframe" style="display:none;"></iframe>
 <form id="gform"
   action="https://docs.google.com/forms/d/e/1FAIpQLSe_YJYVWenRFYbokfFv1lWj27UFDzwtiHKC3bv1phWOUBh3ew/formResponse"
   method="POST"
   target="hidden-iframe"
   style="display:none;">
-  <input type="text" name="entry.1239853975" id="f-lat" />
-  <input type="text" name="entry.472814973" id="f-lng" />
-  <input type="text" name="entry.890646399" id="f-typ" />
-  <input type="text" name="entry.704491100" id="f-popis" />
+  <input type="text" name="entry.1120904205" id="f-lat" />
+  <input type="text" name="entry.511566314" id="f-lng" />
+  <input type="text" name="entry.1363996581" id="f-typ" />
+  <input type="text" name="entry.245862561" id="f-popis" />
+  <input type="text" name="entry.391901790" id="f-cas" />
 </form>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -129,6 +129,7 @@
     var popis = document.getElementById('popis').value.trim();
     var lat = kliknutaLatLng.lat.toFixed(6);
     var lng = kliknutaLatLng.lng.toFixed(6);
+    var cas = new Date().toLocaleString('cs-CZ');
 
     if (docasnyMarker) mapa.removeLayer(docasnyMarker);
     var marker = L.marker(kliknutaLatLng, { icon: ikonaBarva(vybranyTyp) }).addTo(mapa);
@@ -136,11 +137,11 @@
     marker.bindPopup(popupText).openPopup();
     zavritPanel();
 
-    // Uloz do Google Forms - funguje vo vsetkych prehliadacoch
     document.getElementById('f-lat').value = lat;
     document.getElementById('f-lng').value = lng;
     document.getElementById('f-typ').value = vybranyTyp;
     document.getElementById('f-popis').value = popis;
+    document.getElementById('f-cas').value = cas;
     document.getElementById('gform').submit();
 
     var zprava = document.getElementById('zprava');
